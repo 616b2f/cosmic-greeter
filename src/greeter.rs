@@ -242,9 +242,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                     .desktop_entry()
                     .and_then(|g| g.entry("DesktopNames"))
                 {
-                    env.push(format!("XDG_CURRENT_DESKTOP={desktop_names}"));
-                    if let Some(name) = desktop_names.split(':').next() {
-                        env.push(format!("XDG_SESSION_DESKTOP={name}"));
+                    let names: Vec<&str> = desktop_names
+                        .split(';')
+                        .filter(|s| !s.is_empty())
+                        .collect();
+                    env.push(format!("XDG_CURRENT_DESKTOP={}", names.join(":")));
+                    if let Some(&first) = names.first() {
+                        env.push(format!("XDG_SESSION_DESKTOP={first}"));
                     }
                 }
 
@@ -253,7 +257,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
                 // To ensure the env is set correctly, we also set it in the session command
                 for arg in env.iter() {
-                    command.push(arg.clone());
+                    command.push(shlex::quote(arg).into_owned());
                 }
 
                 match shlex::split(exec) {
